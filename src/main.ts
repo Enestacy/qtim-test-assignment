@@ -1,8 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { LogLevel } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.APP_PORT);
+  const configService = app.get<ConfigService>(ConfigService);
+
+  const NODE_ENV = configService.getOrThrow('service.appEnv');
+  const logLevels: LogLevel[] = ['error', 'warn', 'log', 'verbose'];
+  if (NODE_ENV === 'development') {
+    logLevels.push('debug');
+  }
+  app.useLogger(logLevels);
+
+  const APP_PORT = configService.getOrThrow('service.appPort');
+  await app.listen(APP_PORT);
 }
 bootstrap();

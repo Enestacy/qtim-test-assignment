@@ -1,10 +1,9 @@
 # Переменные
 COMPOSE_FILE = docker-compose.yaml
 PROJECT_NAME := qtim
-ENV_FILE = .env.development.local
 
 RUN := run --rm
-DOCKER_COMPOSE := docker-compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE) --project-name $(PROJECT_NAME)
+DOCKER_COMPOSE := docker-compose -f $(COMPOSE_FILE) --project-name $(PROJECT_NAME)
 DOCKER_COMPOSE_RUN := $(DOCKER_COMPOSE) $(RUN)
 
 GREEN = \033[0;32m
@@ -39,19 +38,29 @@ clean:
 	@echo "$(GREEN)Очистка завершена!$(NC)"
 
 rebuild: stop
-	@echo "$(GREEN)Перезапуск контейнеров с пересборкой...$(NC)"
+	@echo "$(GREEN)Пересоздание контейнеров...$(NC)"
 	$(DOCKER_COMPOSE) build --no-cache --force-rm
-	$(DOCKER_COMPOSE) up -d --force-recreate
-	@echo "$(GREEN)Контейнеры пересобраны и запущены!$(NC)"
+	@echo "$(GREEN)Контейнеры пересозданы!$(NC)"
 
 test-unit:
 	@echo "$(GREEN)Запуск unit тестов...$(NC)"
-	$(DOCKER_COMPOSE_RUN) -e "NODE_ENV=test" app npm run test
+	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run test -- --forceExit --detectOpenHandles
 	@echo "$(GREEN)Тесты завершены!$(NC)"
 
 test-e2e:
 	@echo "$(GREEN)Запуск e2e тестов...$(NC)"
-	$(DOCKER_COMPOSE_RUN) -e "NODE_ENV=test" app npm run test:e2e
+	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run test:e2e -- --forceExit --detectOpenHandles
 	@echo "$(GREEN)Тесты завершены!$(NC)"
 
 test: test-unit test-e2e
+
+migrate:
+	NODE_ENV=development $(DOCKER_COMPOSE_RUN) app npm run migration:up
+	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run migration:up
+
+migrate-down:
+	NODE_ENV=development $(DOCKER_COMPOSE_RUN) app npm run migration:down
+	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run migration:down
+
+migration-create:
+	$(DOCKER_COMPOSE_RUN) app npm run typeorm migration:create ./db/migrations/$(name)
