@@ -1,11 +1,9 @@
 # Переменные
-NODE_ENV ?= development
 COMPOSE_FILE = docker-compose.yaml
 PROJECT_NAME := qtim
-ENV_FILE = .env.$(NODE_ENV).local
 
 RUN := run --rm
-DOCKER_COMPOSE := docker-compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE) --project-name $(PROJECT_NAME)
+DOCKER_COMPOSE := docker-compose -f $(COMPOSE_FILE) --project-name $(PROJECT_NAME)
 DOCKER_COMPOSE_RUN := $(DOCKER_COMPOSE) $(RUN)
 
 GREEN = \033[0;32m
@@ -16,7 +14,7 @@ NC = \033[0m # No Color
 provision: rebuild install start
 install:
 	@echo "$(GREEN)Установка зависимостей...$(NC)"
-	$(DOCKER_COMPOSE_RUN) app npm install
+	$(DOCKER_COMPOSE_RUN) -e "NODE_ENV=development" app npm install
 	@echo "$(GREEN)Зависимости установлены!$(NC)"
 
 start:
@@ -42,8 +40,7 @@ clean:
 rebuild: stop
 	@echo "$(GREEN)Перезапуск контейнеров с пересборкой...$(NC)"
 	$(DOCKER_COMPOSE) build --no-cache --force-rm
-	$(MAKE) recreate
-	@echo "$(GREEN)Контейнеры пересобраны и запущены!$(NC)"
+	@echo "$(GREEN)Контейнеры пересобраны!$(NC)"
 
 test-unit:
 	@echo "$(GREEN)Запуск unit тестов...$(NC)"
@@ -66,4 +63,4 @@ migrate-down:
 	$(DOCKER_COMPOSE_RUN) -e "NODE_ENV=test" app npm run migration:down
 
 migration-create:
-	$(DOCKER_COMPOSE_RUN) app npm run typeorm migration:create ./db/migrations/$(name)
+	$(DOCKER_COMPOSE_RUN) -e "NODE_ENV=development" app npm run typeorm migration:create ./db/migrations/$(name)

@@ -22,7 +22,10 @@ import svcConfig from './config/svc.config';
       inject: [ConfigService],
       useFactory: (
         configService: ConfigService<{ database: TypeOrmModuleOptions }, true>,
-      ) => configService.get('database'),
+      ) => {
+        const dbConfig = configService.get('database');
+        return dbConfig;
+      },
     }),
   ],
   controllers: [AppController],
