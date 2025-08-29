@@ -14,6 +14,9 @@ lerna-debug.log*
 
 # OS
 .DS_Store
+.ash_history
+.node_repl_history
+.psql_history
 
 # Tests
 /coverage
@@ -54,3 +57,7 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Package managers
+.npm/*
+.cache
