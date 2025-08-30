@@ -28,10 +28,7 @@ export function buildWhereCondition<T>(
   }
 
   const conditions: FindOptionsWhere<T> = {};
-  console.log('where', where);
   for (const [key, filter] of Object.entries(where)) {
-    console.log('filter', filter);
-    console.log('key', key);
     if (!filter) continue;
 
     const operator = Object.keys(operators).find(op => filter[op] !== undefined);

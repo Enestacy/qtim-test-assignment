@@ -108,8 +108,6 @@ export class ArticleService {
         throw new NotFoundException('Article not found');
       }
 
-      console.log('entityyyyyy', entity);
-
       try {
         await this.redisService.setTTL(cacheKey, JSON.stringify(entity), REDIS_TTL_DEFAULT_INTERVAL);
         this.logger.debug(`Article cached for ID: ${id}`);
