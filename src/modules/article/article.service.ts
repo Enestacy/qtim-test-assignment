@@ -6,15 +6,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ArticleRepository } from './article.repository';
-import { CreateArticleDto, UpdateArticleDto, ListArticleDto } from './dtos';
+import { CreateArticleDto, UpdateArticleDto, ListArticleDto, CachedArticleDto, CachedArticleListDto } from './dtos';
 import { ArticleWithAuthor } from './types/article.types';
 import { buildWhereCondition, buildOrderByCondition } from '../../common/helpers';
+import { parseCachedData } from '../../common/helpers/parse-cached-data.helper';
 import { ArticleEntity } from './article.entity';
+import { RedisService } from '../../infra/redis/redis.service';
+import { REDIS_TTL_DEFAULT_INTERVAL, RedisKeys } from 'src/infra/redis/constants';
+import { buildRedisKey } from 'src/common/helpers/build-redis-key.helper';
 
 @Injectable()
 export class ArticleService {
   constructor(
     private readonly articleRepository: ArticleRepository,
+    private readonly redisService: RedisService,
     private readonly logger: Logger,
   ) {
     this.logger = new Logger(ArticleService.name);
@@ -27,10 +32,9 @@ export class ArticleService {
         throw new InternalServerErrorException();
       }
 
-      this.logger.log(`Article created: ${createdArticle}`);
-      this.logger.debug(`Article created: ${JSON.stringify(createdArticle)}`);
-
       const articleWithAuthor = await this.articleRepository.findByWithAuthor({ id: createdArticle.id });
+
+      await this.invalidateArticleListCache();
 
       return articleWithAuthor;
     } catch (error) {
@@ -55,6 +59,8 @@ export class ArticleService {
         throw new NotFoundException('Article not found');
       }
 
+      await Promise.all([this.invalidateArticleCache(id), this.invalidateArticleListCache()]);
+
       return entity;
     } catch (error) {
       this.logger.error(error.message);
@@ -75,6 +81,8 @@ export class ArticleService {
       if (!deleteResult || deleteResult?.affected === 0) {
         throw new InternalServerErrorException('Failed to delete article');
       }
+
+      await Promise.all([this.invalidateArticleCache(id), this.invalidateArticleListCache()]);
     } catch (error) {
       this.logger.error(error.message);
       throw error;
@@ -83,12 +91,30 @@ export class ArticleService {
 
   async findById(id: string): Promise<ArticleWithAuthor> {
     try {
+      const cacheKey = this.getArticleCacheKey(id);
+
+      const cachedData = await this.redisService.get(cacheKey);
+      if (cachedData) {
+        const validatedData = parseCachedData<CachedArticleDto>(cachedData, CachedArticleDto);
+        this.logger.debug(`Article cache hit for ID: ${id}`);
+        return validatedData;
+      }
+
       const entity = await this.articleRepository.findByWithAuthor({
         id,
       });
+
       if (!entity) {
         throw new NotFoundException('Article not found');
       }
+
+      try {
+        await this.redisService.setTTL(cacheKey, JSON.stringify(entity), REDIS_TTL_DEFAULT_INTERVAL);
+        this.logger.debug(`Article cached for ID: ${id}`);
+      } catch (cacheError) {
+        this.logger.error(`Failed to cache article for ID ${id}: ${cacheError.message}`);
+      }
+
       return entity;
     } catch (error) {
       this.logger.error(error.message);
@@ -98,6 +124,15 @@ export class ArticleService {
 
   async list(query: ListArticleDto): Promise<{ data: ArticleWithAuthor[]; total: number }> {
     try {
+      const cacheKey = this.getArticleListCacheKey(query);
+
+      const cachedData = await this.redisService.get(cacheKey);
+      if (cachedData) {
+        const validatedData = parseCachedData<CachedArticleListDto>(cachedData, CachedArticleListDto);
+        this.logger.debug(`Article list cache hit for query: ${JSON.stringify(query)}`);
+        return validatedData;
+      }
+
       const { limit = 20, offset = 0, where, orderBy } = query;
 
       const whereCondition = buildWhereCondition<ArticleEntity>(where);
@@ -119,13 +154,60 @@ export class ArticleService {
         },
       });
 
-      return {
+      const result = {
         data: entities || [],
         total: total || 0,
       };
+
+      try {
+        await this.redisService.setTTL(cacheKey, JSON.stringify(result), REDIS_TTL_DEFAULT_INTERVAL);
+        this.logger.debug(`Article list cached for query: ${JSON.stringify(query)}`);
+      } catch (cacheError) {
+        this.logger.error(`Failed to cache article list for query ${JSON.stringify(query)}: ${cacheError.message}`);
+      }
+
+      return result;
     } catch (error) {
       this.logger.error(error.message);
       throw error;
+    }
+  }
+
+  // cache methods
+
+  private getArticleCacheKey(id: string): string {
+    const cacheKey = buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, id);
+    return cacheKey;
+  }
+
+  private getArticleListCacheKey(query: ListArticleDto): string {
+    const queryString = JSON.stringify(query);
+    const cacheKey = buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, Buffer.from(queryString).toString('base64'));
+    return cacheKey;
+  }
+
+  private async invalidateArticleCache(id: string): Promise<void> {
+    try {
+      const cacheKey = this.getArticleCacheKey(id);
+      await this.redisService.del(cacheKey);
+      this.logger.debug(`Invalidated article cache for ID: ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to invalidate article cache for ID ${id}: ${error.message}`);
+    }
+  }
+
+  private async invalidateArticleListCache(): Promise<void> {
+    try {
+      const pattern = buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*');
+      const keys = await this.redisService.keys(pattern);
+      if (keys.length > 0) {
+        const deletedCount = await this.redisService.delMultiple(keys);
+        this.logger.debug(`Invalidated ${deletedCount} article list cache entries`);
+      } else {
+        this.logger.debug('No article list cache entries found to invalidate');
+      }
+    } catch (error) {
+      this.logger.error(`Failed to invalidate article list cache: ${error.message}`);
     }
   }
 }

@@ -2,14 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Logger, NotFoundException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
 import { ArticleService } from './article.service';
 import { ArticleRepository } from './article.repository';
+import { RedisService } from '../../infra/redis/redis.service';
 import { CreateArticleDto, UpdateArticleDto, ListArticleDto } from './dtos';
 import { ArticleWithAuthor } from './types/article.types';
 import { ArticleEntity } from './article.entity';
 import { randomUUID } from 'crypto';
+import { REDIS_TTL_DEFAULT_INTERVAL, RedisKeys } from '../../infra/redis/constants';
+import { buildRedisKey } from '../../common/helpers/build-redis-key.helper';
 
 describe('ArticleService', () => {
   let service: ArticleService;
   let articleRepository: jest.Mocked<ArticleRepository>;
+  let redisService: jest.Mocked<RedisService>;
 
   const mockArticle: ArticleEntity = {
     id: randomUUID(),
@@ -58,12 +62,23 @@ describe('ArticleService', () => {
             findAndCountAll: jest.fn(),
           },
         },
+        {
+          provide: RedisService,
+          useValue: {
+            get: jest.fn(),
+            setTTL: jest.fn(),
+            del: jest.fn(),
+            keys: jest.fn(),
+            delMultiple: jest.fn(),
+          },
+        },
         Logger,
       ],
     }).compile();
 
     service = module.get<ArticleService>(ArticleService);
     articleRepository = module.get(ArticleRepository);
+    redisService = module.get(RedisService);
   });
 
   afterEach(() => {
@@ -78,11 +93,12 @@ describe('ArticleService', () => {
     };
     const authorId = 'user-1';
 
-    it('should successfully create article', async () => {
+    it('should successfully create article and invalidate list cache', async () => {
       const articleRepositoryCreateSpy = jest.spyOn(articleRepository, 'create').mockResolvedValue(mockArticle);
       const articleRepositoryFindByWithAuthorSpy = jest
         .spyOn(articleRepository, 'findByWithAuthor')
         .mockResolvedValue(mockArticleWithAuthor);
+      const redisKeysSpy = jest.spyOn(redisService, 'keys').mockResolvedValue([]);
 
       const result = await service.create(createArticleDto, authorId);
 
@@ -91,6 +107,7 @@ describe('ArticleService', () => {
         authorId,
       });
       expect(articleRepositoryFindByWithAuthorSpy).toHaveBeenCalledWith({ id: mockArticle.id });
+      expect(redisKeysSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*'));
       expect(result).toEqual(mockArticleWithAuthor);
     });
 
@@ -124,18 +141,22 @@ describe('ArticleService', () => {
     };
     const authorId = 'user-1';
 
-    it('should successfully update article', async () => {
+    it('should successfully update article and invalidate caches', async () => {
       const articleRepositoryUpdateSpy = jest
         .spyOn(articleRepository, 'update')
         .mockResolvedValue({ affected: 1 } as any);
       const articleRepositoryFindByWithAuthorSpy = jest
         .spyOn(articleRepository, 'findByWithAuthor')
         .mockResolvedValue(mockArticleWithAuthor);
+      const redisDelSpy = jest.spyOn(redisService, 'del').mockResolvedValue(1);
+      const redisKeysSpy = jest.spyOn(redisService, 'keys').mockResolvedValue([]);
 
       const result = await service.update(articleId, updateArticleDto, authorId);
 
       expect(articleRepositoryUpdateSpy).toHaveBeenCalledWith({ id: articleId, authorId }, updateArticleDto);
       expect(articleRepositoryFindByWithAuthorSpy).toHaveBeenCalledWith({ id: articleId });
+      expect(redisDelSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      expect(redisKeysSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*'));
       expect(result).toEqual(mockArticleWithAuthor);
     });
 
@@ -181,16 +202,20 @@ describe('ArticleService', () => {
     const articleId = 'article-1';
     const authorId = 'user-1';
 
-    it('should successfully delete article', async () => {
+    it('should successfully delete article and invalidate caches', async () => {
       const articleRepositoryFindBySpy = jest.spyOn(articleRepository, 'findBy').mockResolvedValue(mockArticle);
       const articleRepositoryDeleteSpy = jest
         .spyOn(articleRepository, 'delete')
         .mockResolvedValue({ affected: 1 } as any);
+      const redisDelSpy = jest.spyOn(redisService, 'del').mockResolvedValue(1);
+      const redisKeysSpy = jest.spyOn(redisService, 'keys').mockResolvedValue([]);
 
       const result = await service.delete(articleId, authorId);
 
       expect(articleRepositoryFindBySpy).toHaveBeenCalledWith({ where: { id: articleId } });
       expect(articleRepositoryDeleteSpy).toHaveBeenCalledWith({ id: articleId, authorId });
+      expect(redisDelSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      expect(redisKeysSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*'));
       expect(result).toBeUndefined();
     });
 
@@ -241,33 +266,74 @@ describe('ArticleService', () => {
   describe('findById', () => {
     const articleId = 'article-1';
 
-    it('should successfully find article by id', async () => {
-      const articleRepositoryFindByWithAuthorSpy = jest
-        .spyOn(articleRepository, 'findByWithAuthor')
-        .mockResolvedValue(mockArticleWithAuthor);
+    it('should return cached article when available', async () => {
+      const cachedData = JSON.stringify(mockArticleWithAuthor);
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(cachedData);
 
       const result = await service.findById(articleId);
 
+      expect(redisGetSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      expect(result).toEqual(mockArticleWithAuthor);
+    });
+
+    it('should fetch from database and cache when not in cache', async () => {
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
+      const articleRepositoryFindByWithAuthorSpy = jest
+        .spyOn(articleRepository, 'findByWithAuthor')
+        .mockResolvedValue(mockArticleWithAuthor);
+      const redisSetTTLSpy = jest.spyOn(redisService, 'setTTL').mockResolvedValue('OK');
+
+      const result = await service.findById(articleId);
+
+      expect(redisGetSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
       expect(articleRepositoryFindByWithAuthorSpy).toHaveBeenCalledWith({ id: articleId });
+      expect(redisSetTTLSpy).toHaveBeenCalledWith(
+        buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId),
+        JSON.stringify(mockArticleWithAuthor),
+        REDIS_TTL_DEFAULT_INTERVAL,
+      );
+      expect(result).toEqual(mockArticleWithAuthor);
+    });
+
+    it('should handle cache set error gracefully', async () => {
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
+      const articleRepositoryFindByWithAuthorSpy = jest
+        .spyOn(articleRepository, 'findByWithAuthor')
+        .mockResolvedValue(mockArticleWithAuthor);
+      const redisSetTTLSpy = jest.spyOn(redisService, 'setTTL').mockRejectedValue(new Error('Redis error'));
+
+      const result = await service.findById(articleId);
+
+      expect(redisGetSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      expect(articleRepositoryFindByWithAuthorSpy).toHaveBeenCalledWith({ id: articleId });
+      expect(redisSetTTLSpy).toHaveBeenCalledWith(
+        buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId),
+        JSON.stringify(mockArticleWithAuthor),
+        REDIS_TTL_DEFAULT_INTERVAL,
+      );
       expect(result).toEqual(mockArticleWithAuthor);
     });
 
     it('should throw NotFoundException if article not found', async () => {
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
       const articleRepositoryFindByWithAuthorSpy = jest
         .spyOn(articleRepository, 'findByWithAuthor')
         .mockResolvedValue(null);
 
       await expect(service.findById(articleId)).rejects.toThrow(NotFoundException);
+      expect(redisGetSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
       expect(articleRepositoryFindByWithAuthorSpy).toHaveBeenCalledWith({ id: articleId });
     });
 
     it('should pass error from repository', async () => {
       const error = new Error('Database error');
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
       const articleRepositoryFindByWithAuthorSpy = jest
         .spyOn(articleRepository, 'findByWithAuthor')
         .mockRejectedValue(error);
 
       await expect(service.findById(articleId)).rejects.toThrow(error);
+      expect(redisGetSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
       expect(articleRepositoryFindByWithAuthorSpy).toHaveBeenCalledWith({ id: articleId });
     });
   });
@@ -286,18 +352,38 @@ describe('ArticleService', () => {
       },
     };
 
-    it('should successfully list articles', async () => {
+    it('should return cached list when available', async () => {
       const mockResponse = {
         data: [mockArticleWithAuthor],
         total: 1,
       };
-      const articleRepositoryFindAndCountAllSpy = jest
-        .spyOn(articleRepository, 'findAndCountAll')
-        // @ts-expect-error todo-typo
-        .mockResolvedValue([[mockArticleWithAuthor], 1]);
+      const cachedData = JSON.stringify(mockResponse);
+      const queryString = JSON.stringify(listArticleDto);
+      const cacheKey = buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, Buffer.from(queryString).toString('base64'));
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(cachedData);
 
       const result = await service.list(listArticleDto);
 
+      expect(redisGetSpy).toHaveBeenCalledWith(cacheKey);
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should fetch from database and cache when not in cache', async () => {
+      const mockResponse = {
+        data: [mockArticleWithAuthor],
+        total: 1,
+      };
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
+      const articleRepositoryFindAndCountAllSpy = jest
+        .spyOn(articleRepository, 'findAndCountAll')
+        .mockResolvedValue([[mockArticleWithAuthor as ArticleEntity], 1]);
+      const redisSetTTLSpy = jest.spyOn(redisService, 'setTTL').mockResolvedValue('OK');
+
+      const result = await service.list(listArticleDto);
+
+      const queryString = JSON.stringify(listArticleDto);
+      const cacheKey = buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, Buffer.from(queryString).toString('base64'));
+      expect(redisGetSpy).toHaveBeenCalledWith(cacheKey);
       expect(articleRepositoryFindAndCountAllSpy).toHaveBeenCalledWith({
         where: expect.any(Object),
         order: expect.any(Object),
@@ -313,6 +399,28 @@ describe('ArticleService', () => {
           author: { id: true, firstName: true, lastName: true },
         },
       });
+      expect(redisSetTTLSpy).toHaveBeenCalledWith(cacheKey, JSON.stringify(mockResponse), REDIS_TTL_DEFAULT_INTERVAL);
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should handle cache set error gracefully', async () => {
+      const mockResponse = {
+        data: [mockArticleWithAuthor],
+        total: 1,
+      };
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
+      const articleRepositoryFindAndCountAllSpy = jest
+        .spyOn(articleRepository, 'findAndCountAll')
+        .mockResolvedValue([[mockArticleWithAuthor as ArticleEntity], 1]);
+      const redisSetTTLSpy = jest.spyOn(redisService, 'setTTL').mockRejectedValue(new Error('Redis error'));
+
+      const result = await service.list(listArticleDto);
+
+      const queryString = JSON.stringify(listArticleDto);
+      const cacheKey = buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, Buffer.from(queryString).toString('base64'));
+      expect(redisGetSpy).toHaveBeenCalledWith(cacheKey);
+      expect(articleRepositoryFindAndCountAllSpy).toHaveBeenCalled();
+      expect(redisSetTTLSpy).toHaveBeenCalledWith(cacheKey, JSON.stringify(mockResponse), REDIS_TTL_DEFAULT_INTERVAL);
       expect(result).toEqual(mockResponse);
     });
 
@@ -322,12 +430,16 @@ describe('ArticleService', () => {
         data: [],
         total: 0,
       };
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
       const articleRepositoryFindAndCountAllSpy = jest
         .spyOn(articleRepository, 'findAndCountAll')
         .mockResolvedValue([[], 0]);
 
       const result = await service.list(listArticleDtoWithoutDefaults);
 
+      const queryString = JSON.stringify(listArticleDtoWithoutDefaults);
+      const cacheKey = buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, Buffer.from(queryString).toString('base64'));
+      expect(redisGetSpy).toHaveBeenCalledWith(cacheKey);
       expect(articleRepositoryFindAndCountAllSpy).toHaveBeenCalledWith({
         where: expect.any(Object),
         order: expect.any(Object),
@@ -348,12 +460,86 @@ describe('ArticleService', () => {
 
     it('should pass error from repository', async () => {
       const error = new Error('Database error');
+      const redisGetSpy = jest.spyOn(redisService, 'get').mockResolvedValue(null);
       const articleRepositoryFindAndCountAllSpy = jest
         .spyOn(articleRepository, 'findAndCountAll')
         .mockRejectedValue(error);
 
       await expect(service.list(listArticleDto)).rejects.toThrow(error);
+      expect(redisGetSpy).toHaveBeenCalled();
       expect(articleRepositoryFindAndCountAllSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('cache methods', () => {
+    describe('getArticleCacheKey', () => {
+      it('should generate correct cache key for article', () => {
+        const articleId = 'test-article-id';
+        const result = (service as any).getArticleCacheKey(articleId);
+        expect(result).toBe(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      });
+    });
+
+    describe('getArticleListCacheKey', () => {
+      it('should generate correct cache key for article list', () => {
+        const query: ListArticleDto = { limit: 10, offset: 0 };
+        const result = (service as any).getArticleListCacheKey(query);
+        const queryString = JSON.stringify(query);
+        const expectedKey = buildRedisKey(
+          RedisKeys.ARTICLE_LIST_CACHE_PREFIX,
+          Buffer.from(queryString).toString('base64'),
+        );
+        expect(result).toBe(expectedKey);
+      });
+    });
+
+    describe('invalidateArticleCache', () => {
+      it('should successfully invalidate article cache', async () => {
+        const articleId = 'test-article-id';
+        const redisDelSpy = jest.spyOn(redisService, 'del').mockResolvedValue(1);
+
+        await (service as any).invalidateArticleCache(articleId);
+
+        expect(redisDelSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      });
+
+      it('should handle redis error gracefully', async () => {
+        const articleId = 'test-article-id';
+        const redisDelSpy = jest.spyOn(redisService, 'del').mockRejectedValue(new Error('Redis error'));
+
+        await expect((service as any).invalidateArticleCache(articleId)).resolves.toBeUndefined();
+        expect(redisDelSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_CACHE_PREFIX, articleId));
+      });
+    });
+
+    describe('invalidateArticleListCache', () => {
+      it('should successfully invalidate article list cache', async () => {
+        const cacheKeys = ['key1', 'key2'];
+        const redisKeysSpy = jest.spyOn(redisService, 'keys').mockResolvedValue(cacheKeys);
+        const redisDelMultipleSpy = jest.spyOn(redisService, 'delMultiple').mockResolvedValue(2);
+
+        await (service as any).invalidateArticleListCache();
+
+        expect(redisKeysSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*'));
+        expect(redisDelMultipleSpy).toHaveBeenCalledWith(cacheKeys);
+      });
+
+      it('should handle empty cache keys', async () => {
+        const redisKeysSpy = jest.spyOn(redisService, 'keys').mockResolvedValue([]);
+        const redisDelMultipleSpy = jest.spyOn(redisService, 'delMultiple').mockResolvedValue(0);
+
+        await (service as any).invalidateArticleListCache();
+
+        expect(redisKeysSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*'));
+        expect(redisDelMultipleSpy).not.toHaveBeenCalled();
+      });
+
+      it('should handle redis error gracefully', async () => {
+        const redisKeysSpy = jest.spyOn(redisService, 'keys').mockRejectedValue(new Error('Redis error'));
+
+        await expect((service as any).invalidateArticleListCache()).resolves.toBeUndefined();
+        expect(redisKeysSpy).toHaveBeenCalledWith(buildRedisKey(RedisKeys.ARTICLE_LIST_CACHE_PREFIX, '*'));
+      });
     });
   });
 });

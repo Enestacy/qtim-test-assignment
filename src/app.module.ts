@@ -9,6 +9,8 @@ import { UserModule } from './modules/user';
 import { AuthModule } from './modules/auth';
 import { HttpModule } from '@nestjs/axios';
 import { ArticleModule } from './modules/article';
+import { RedisModule } from '@liaoliaots/nestjs-redis';
+import redisConfig from './config/redis.config';
 
 @Module({
   imports: [
@@ -17,7 +19,7 @@ import { ArticleModule } from './modules/article';
       envFilePath: [`.env.${process.env.NODE_ENV}.local`, `.env.${process.env.NODE_ENV}`],
       isGlobal: true,
       cache: true,
-      load: [svcConfig, dbConfig],
+      load: [svcConfig, dbConfig, redisConfig],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -27,6 +29,7 @@ import { ArticleModule } from './modules/article';
         return dbConfig;
       },
     }),
+    RedisModule,
     UserModule,
     AuthModule,
     ArticleModule,
