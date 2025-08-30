@@ -40,7 +40,8 @@ export class AuthRepository {
     try {
       const userRepository = getRepository(activeQueryRunner ?? this.datasource, AuthEntity);
       const userData = userRepository.create(data);
-      return userRepository.save(userData);
+      const savedUser = await userRepository.save(userData);
+      return savedUser;
     } catch (error) {
       this.logger.error(error.message);
       return null;

@@ -7,9 +7,11 @@ import dbConfig from 'db/config/db-config';
 import svcConfig from './config/svc.config';
 import { UserModule } from './modules/user';
 import { AuthModule } from './modules/auth';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
+    HttpModule,
     ConfigModule.forRoot({
       envFilePath: [`.env.${process.env.NODE_ENV}.local`, `.env.${process.env.NODE_ENV}`],
       isGlobal: true,

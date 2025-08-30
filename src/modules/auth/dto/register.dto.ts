@@ -1,9 +1,10 @@
-import { IsDefined, IsString, Matches, MinLength } from 'class-validator';
+import { IsDefined, IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 import { CreateUserDto } from 'src/modules/user/dtos';
 
 export class RegisterDto extends CreateUserDto {
   @IsDefined()
   @IsString()
+  @IsNotEmpty()
   public login: string;
 
   @IsDefined()

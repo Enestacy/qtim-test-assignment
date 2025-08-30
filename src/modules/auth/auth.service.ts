@@ -4,14 +4,11 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { AuthEntity } from './auth.entity';
 import { withTransaction } from 'src/common/helpers';
 import { LoginDto, RegisterDto } from './dto';
 import { AuthRepository } from './auth.repository';
@@ -21,7 +18,6 @@ import { TokensData } from './types';
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(AuthEntity)
     private authRepository: AuthRepository,
     private jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -35,11 +31,10 @@ export class AuthService {
   async login({ login, password }: LoginDto) {
     try {
       const credentials = await this.authRepository.findOneBy({ login });
-      if (!credentials) throw new NotFoundException('Credentials not found');
+      if (!credentials) throw new UnauthorizedException('Invalid credentials');
 
       const isPasswordMatches = await bcrypt.compare(password, credentials.password);
-
-      if (!isPasswordMatches) throw new UnauthorizedException('Invalid password');
+      if (!isPasswordMatches) throw new UnauthorizedException('Invalid credentials');
 
       const tokens = await this.generateTokens(credentials.userId, credentials.login);
 
@@ -52,7 +47,7 @@ export class AuthService {
     }
   }
 
-  async logout(userId: string): Promise<number> {
+  async logout(userId: string): Promise<void> {
     try {
       const credentials = await this.authRepository.update(
         { userId },
@@ -60,9 +55,9 @@ export class AuthService {
           refreshToken: null,
         },
       );
-      if (!credentials) throw new InternalServerErrorException('Failed to logout');
+      if (!credentials || !credentials?.affected) throw new InternalServerErrorException('Failed to logout');
 
-      return credentials.affected;
+      return;
     } catch (error) {
       this.logger.error(error);
       throw error;
@@ -88,20 +83,23 @@ export class AuthService {
       const refreshTokenHash = await this.hashData(tokens.refreshToken);
       const passwordHash = await this.hashData(password);
 
-      const credentials = await this.authRepository.create({
-        userId: user.id,
-        login,
-        password: passwordHash,
-        refreshToken: refreshTokenHash,
-      });
-
-      await queryRunner.manager.save(AuthEntity, credentials);
+      await this.authRepository.create(
+        {
+          userId: user.id,
+          login,
+          password: passwordHash,
+          refreshToken: refreshTokenHash,
+        },
+        { queryRunner },
+      );
 
       return tokens;
     });
   }
 
   async refreshTokens(userId: string, refreshToken: string) {
+    this.logger.log('userId', userId);
+    this.logger.log('refreshToken', refreshToken);
     const credentials = await this.authRepository.findOneBy({ userId });
     if (!credentials || !credentials.refreshToken) throw new UnauthorizedException();
 
