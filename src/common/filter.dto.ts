@@ -1,7 +1,6 @@
-import { IsOptional, IsObject, ValidateNested, IsArray, IsString, IsNumber, IsDateString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsArray, IsString, IsNumber, IsDateString } from 'class-validator';
 
-export class FilterCondition {
+export class FilterConditionDto {
   @IsOptional()
   equals?: any;
 
@@ -56,19 +55,4 @@ export class FilterCondition {
   @IsOptional()
   @IsDateString()
   gteDate?: string;
-}
-
-export class BaseFilterDto<T> {
-  @IsOptional()
-  @IsObject()
-  @ValidateNested()
-  @Type(() => FilterCondition)
-  where?: {
-    [key in keyof T]: FilterCondition;
-  };
-
-  @IsOptional()
-  orderBy?: {
-    [key in keyof T]: 'asc' | 'desc';
-  };
 }
