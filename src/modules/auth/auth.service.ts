@@ -56,8 +56,6 @@ export class AuthService {
         },
       );
       if (!credentials || !credentials?.affected) throw new InternalServerErrorException('Failed to logout');
-
-      return;
     } catch (error) {
       this.logger.error(error);
       throw error;

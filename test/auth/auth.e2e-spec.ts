@@ -4,7 +4,7 @@ import { AuthEntity } from 'src/modules/auth/auth.entity';
 import { UserEntity } from 'src/modules/user/user.entity';
 import { createTestingApp, makeRequest } from 'test/helpers';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { createUser, UserFactory, createAuth, AuthFactory, defaultPassword } from '../factories';
+import { createUser, UserFactory, createAuth, AuthFactory, defaultPassword, defaultRefreshToken } from '../factories';
 import createToken from 'test/helpers/create-token.helper';
 import { ConfigService } from '@nestjs/config';
 
@@ -207,7 +207,6 @@ describe('AuthController (e2e)', () => {
       await createUser(userRepository, userEntity);
 
       const authLogin = 'testuser';
-
       const { token: refreshToken } = await createToken(
         {
           userId: userEntity.id,
@@ -218,7 +217,6 @@ describe('AuthController (e2e)', () => {
           secret: configService.get('service.jwt.secret'),
         },
       );
-
       const authEntity = AuthFactory.build({
         userId: userEntity.id,
         login: authLogin,
@@ -273,26 +271,56 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  // describe('/auth/logout', () => {
-  //   it('should successfully logout user', async () => {
-  //     const requestBody = {
-  //       refreshToken: 'refreshToken',
-  //     };
-  //   });
+  describe('/auth/logout', () => {
+    it('should successfully logout user', async () => {
+      const userEntity = UserFactory.build();
+      await createUser(userRepository, userEntity);
 
-  //   it('should return error if refresh token is not provided', async () => {
-  //     const requestBody = {};
-  //     const expectedResponse = {
-  //       statusCode: 401,
-  //       error: 'Unauthorized',
-  //       message: 'Invalid credentials',
-  //     };
-  //   });
+      const authLogin = 'testuser';
+      const { token: accessToken } = await createToken(
+        {
+          userId: userEntity.id,
+          login: authLogin,
+        },
+        {
+          expiresIn: configService.get('service.jwt.accessExpires'),
+          secret: configService.get('service.jwt.secret'),
+        },
+      );
 
-  //   it('should return error if refresh token is invalid', async () => {
-  //     const requestBody = {
-  //       refreshToken: 'invalidRefreshToken',
-  //     };
-  //   });
-  // });
+      const authEntity = AuthFactory.build({
+        userId: userEntity.id,
+        login: authLogin,
+        refreshTokenToHash: defaultRefreshToken,
+      });
+      await createAuth(authRepository, authEntity);
+
+      const requestHeaders = {
+        Authorization: `Bearer ${accessToken}`,
+      };
+
+      await makeRequest({
+        app,
+        method: 'POST',
+        route: '/auth/logout',
+        expectedStatus: 204,
+        headers: requestHeaders,
+      });
+    });
+
+    it('should return error if access token is not provided', async () => {
+      const expectedResponse = {
+        statusCode: 401,
+        message: 'Unauthorized',
+      };
+
+      await makeRequest({
+        app,
+        method: 'POST',
+        route: '/auth/logout',
+        expectedStatus: 401,
+        expectedResponse,
+      });
+    });
+  });
 });
