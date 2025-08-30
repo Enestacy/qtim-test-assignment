@@ -38,6 +38,7 @@ export class CreateUsersAndUserCredentials1756498609187 implements MigrationInte
             name: 'login',
             type: 'varchar(255)',
             isNullable: false,
+            isUnique: true,
           },
           {
             name: 'password',

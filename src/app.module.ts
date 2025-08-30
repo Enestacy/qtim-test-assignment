@@ -8,6 +8,7 @@ import svcConfig from './config/svc.config';
 import { UserModule } from './modules/user';
 import { AuthModule } from './modules/auth';
 import { HttpModule } from '@nestjs/axios';
+import { ArticleModule } from './modules/article';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HttpModule } from '@nestjs/axios';
     }),
     UserModule,
     AuthModule,
+    ArticleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
