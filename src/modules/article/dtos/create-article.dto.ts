@@ -1,5 +1,6 @@
 import { IsDate, IsDefined, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ArticleEntity } from '../article.entity';
+import { Type } from 'class-transformer';
 
 export class CreateArticleDto implements Partial<ArticleEntity> {
   @IsDefined()
@@ -15,5 +16,6 @@ export class CreateArticleDto implements Partial<ArticleEntity> {
   @IsDefined()
   @IsDate()
   @IsNotEmpty()
+  @Type(() => Date)
   public publishedAt: Date;
 }

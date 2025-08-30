@@ -49,7 +49,11 @@ test-unit:
 
 test-e2e:
 	@echo "$(GREEN)Запуск e2e тестов...$(NC)"
-	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run test:e2e -- --forceExit --detectOpenHandles
+	@if [ -z "$(file)" ]; then \
+		NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run test:e2e -- --forceExit --detectOpenHandles; \
+	else \
+		NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run test:e2e -- $(file) --forceExit --detectOpenHandles; \
+	fi
 	@echo "$(GREEN)Тесты завершены!$(NC)"
 
 test: test-unit test-e2e

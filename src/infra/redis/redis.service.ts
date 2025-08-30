@@ -41,4 +41,8 @@ export class RedisService {
     }
     return await this.redis.del(...keys);
   }
+
+  async flushall(): Promise<string> {
+    return await this.redis.flushall();
+  }
 }

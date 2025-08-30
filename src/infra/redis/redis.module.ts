@@ -13,7 +13,7 @@ import { RedisService } from './redis.service';
           config: {
             host: configService.getOrThrow('redis.host'),
             port: configService.getOrThrow('redis.port'),
-            password: configService.getOrThrow('redis.password'),
+            db: configService.get('app.env') === 'test' ? 1 : 0,
           },
         };
       },
