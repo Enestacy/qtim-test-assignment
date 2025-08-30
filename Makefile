@@ -55,12 +55,18 @@ test-e2e:
 test: test-unit test-e2e
 
 migrate:
+	@echo "$(GREEN)Запуск миграций...$(NC)"
 	NODE_ENV=development $(DOCKER_COMPOSE_RUN) app npm run migration:up
 	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run migration:up
+	@echo "$(GREEN)Миграции завершены!$(NC)"
 
 migrate-down:
+	@echo "$(YELLOW)Откат миграций...$(NC)"
 	NODE_ENV=development $(DOCKER_COMPOSE_RUN) app npm run migration:down
 	NODE_ENV=test $(DOCKER_COMPOSE_RUN) app npm run migration:down
+	@echo "$(YELLOW)Откат миграций завершен!$(NC)"
 
 migration-create:
+	@echo "$(GREEN)Создание миграции...$(NC)"
 	$(DOCKER_COMPOSE_RUN) app npm run typeorm migration:create ./db/migrations/$(name)
+	@echo "$(GREEN)Миграция создана!$(NC)"

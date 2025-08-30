@@ -4,23 +4,13 @@ import { snakeCase } from 'typeorm/util/StringUtils';
 import * as pluralize from 'pluralize';
 
 @Injectable()
-export class NamingStrategy
-  extends DefaultNamingStrategy
-  implements NamingStrategyInterface
-{
+export class NamingStrategy extends DefaultNamingStrategy implements NamingStrategyInterface {
   tableName(className: string, customName: string): string {
     return customName || pluralize(snakeCase(className));
   }
 
-  columnName(
-    propertyName: string,
-    customName: string,
-    embeddedPrefixes: string[],
-  ): string {
-    return (
-      snakeCase(embeddedPrefixes.concat('').join('_')) +
-      (customName || snakeCase(propertyName))
-    );
+  columnName(propertyName: string, customName: string, embeddedPrefixes: string[]): string {
+    return snakeCase(embeddedPrefixes.concat('').join('_')) + (customName || snakeCase(propertyName));
   }
 
   relationName(propertyName: string): string {
@@ -31,21 +21,11 @@ export class NamingStrategy
     return snakeCase(`${relationName}_${referencedColumnName}`);
   }
 
-  joinTableName(
-    firstTableName: string,
-    secondTableName: string,
-    firstPropertyName: string,
-  ): string {
-    return snakeCase(
-      `${firstTableName}_${firstPropertyName.replace(/\./gi, '_')}_${secondTableName}`,
-    );
+  joinTableName(firstTableName: string, secondTableName: string, firstPropertyName: string): string {
+    return snakeCase(`${firstTableName}_${firstPropertyName.replace(/\./gi, '_')}_${secondTableName}`);
   }
 
-  joinTableColumnName(
-    tableName: string,
-    propertyName: string,
-    columnName?: string,
-  ): string {
+  joinTableColumnName(tableName: string, propertyName: string, columnName?: string): string {
     return snakeCase(`${tableName}_${columnName || propertyName}`);
   }
 
