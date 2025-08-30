@@ -9,7 +9,7 @@ import { AuthRepository } from './auth.repository';
 import { UserService } from '../user/user.service';
 import { AuthEntity } from './auth.entity';
 import { LoginDto, RegisterDto } from './dto';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { UserEntity } from '../user/user.entity';
 
@@ -135,10 +135,10 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw NotFoundException if credentials are not found', async () => {
+    it('should throw UnauthorizedException if credentials are not found', async () => {
       const repositoryFindOneBySpy = jest.spyOn(authRepository, 'findOneBy').mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(NotFoundException);
+      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
       expect(repositoryFindOneBySpy).toHaveBeenCalledWith({ login: 'testuser' });
     });
 
