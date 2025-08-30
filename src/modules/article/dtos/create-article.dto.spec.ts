@@ -152,7 +152,7 @@ describe('CreateArticleDto', () => {
 
       expect(errors).toHaveLength(1);
       expect(errors[0].property).toBe('publishedAt');
-      expect(errors[0].constraints).toHaveProperty('isDate');
+      expect(errors[0].constraints).toHaveProperty('isDateString');
     });
 
     it('should return error if publishedAt is empty', async () => {
