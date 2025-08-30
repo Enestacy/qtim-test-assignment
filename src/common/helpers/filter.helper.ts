@@ -1,5 +1,5 @@
 import { FindOptionsWhere, Equal, Not, ILike, LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual, In } from 'typeorm';
-import { FilterCondition } from '../filter.dto';
+import { FilterConditionDto as FilterCondition } from '../filter.dto';
 
 type OperatorHandler = (value: any) => any;
 
@@ -20,7 +20,9 @@ const operators: Record<string, OperatorHandler> = {
   gteDate: value => MoreThanOrEqual(new Date(value)),
 };
 
-export function buildWhereCondition<T>(where: { [key in keyof T]: FilterCondition } | undefined): FindOptionsWhere<T> {
+export function buildWhereCondition<T>(
+  where: Partial<{ [key in keyof T]: FilterCondition }> | undefined,
+): FindOptionsWhere<T> {
   if (!where) {
     return {};
   }
@@ -48,7 +50,7 @@ export function buildWhereCondition<T>(where: { [key in keyof T]: FilterConditio
   return conditions;
 }
 
-export function buildOrderByCondition<T>(orderBy: { [key in keyof T]: 'asc' | 'desc' } | undefined): {
+export function buildOrderByCondition<T>(orderBy: Partial<{ [key in keyof T]: 'asc' | 'desc' }> | undefined): {
   [key: string]: 'ASC' | 'DESC';
 } {
   if (!orderBy) {

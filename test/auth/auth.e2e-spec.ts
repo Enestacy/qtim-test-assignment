@@ -206,11 +206,9 @@ describe('AuthController (e2e)', () => {
       const userEntity = UserFactory.build();
       await createUser(userRepository, userEntity);
 
-      const authLogin = 'testuser';
       const { token: refreshToken } = await createToken(
         {
           userId: userEntity.id,
-          login: authLogin,
         },
         {
           expiresIn: configService.get('service.jwt.refreshExpires'),
@@ -219,7 +217,7 @@ describe('AuthController (e2e)', () => {
       );
       const authEntity = AuthFactory.build({
         userId: userEntity.id,
-        login: authLogin,
+        login: 'testuser',
         refreshTokenToHash: refreshToken,
       });
       await createAuth(authRepository, authEntity);
@@ -276,11 +274,9 @@ describe('AuthController (e2e)', () => {
       const userEntity = UserFactory.build();
       await createUser(userRepository, userEntity);
 
-      const authLogin = 'testuser';
       const { token: accessToken } = await createToken(
         {
           userId: userEntity.id,
-          login: authLogin,
         },
         {
           expiresIn: configService.get('service.jwt.accessExpires'),
@@ -290,7 +286,7 @@ describe('AuthController (e2e)', () => {
 
       const authEntity = AuthFactory.build({
         userId: userEntity.id,
-        login: authLogin,
+        login: 'testuser',
         refreshTokenToHash: defaultRefreshToken,
       });
       await createAuth(authRepository, authEntity);

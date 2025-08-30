@@ -36,7 +36,7 @@ export class AuthService {
       const isPasswordMatches = await bcrypt.compare(password, credentials.password);
       if (!isPasswordMatches) throw new UnauthorizedException('Invalid credentials');
 
-      const tokens = await this.generateTokens(credentials.userId, credentials.login);
+      const tokens = await this.generateTokens(credentials.userId);
 
       await this.updateRefreshToken(credentials.userId, tokens.refreshToken);
 
@@ -77,7 +77,7 @@ export class AuthService {
         throw new InternalServerErrorException('Failed to create user');
       }
 
-      const tokens = await this.generateTokens(user.id, login);
+      const tokens = await this.generateTokens(user.id);
       const refreshTokenHash = await this.hashData(tokens.refreshToken);
       const passwordHash = await this.hashData(password);
 
@@ -105,15 +105,15 @@ export class AuthService {
 
     if (!refreshTokenMatches) throw new UnauthorizedException();
 
-    const tokens = await this.generateTokens(credentials.userId, credentials.login);
+    const tokens = await this.generateTokens(credentials.userId);
     await this.updateRefreshToken(userId, tokens.refreshToken);
     return tokens;
   }
 
   // helpers
 
-  private async generateTokens(sub: string, login: string): Promise<TokensData> {
-    const payload = { login, sub };
+  private async generateTokens(sub: string): Promise<TokensData> {
+    const payload = { sub };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
