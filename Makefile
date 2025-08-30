@@ -11,7 +11,7 @@ YELLOW = \033[1;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-provision: rebuild install start
+provision: rebuild install migrate start
 install:
 	@echo "$(GREEN)Установка зависимостей...$(NC)"
 	$(DOCKER_COMPOSE_RUN) app npm install
