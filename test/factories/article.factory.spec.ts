@@ -16,7 +16,7 @@ export const ArticleFactory = EntityFactory.define(() => {
   entity.id = randomUUID();
   entity.title = 'Test Article';
   entity.description = 'Test Description';
-  entity.publishedAt = new Date('2024-01-01');
+  entity.publishedAt = '2024-01-01';
   entity.authorId = randomUUID();
   entity.createdAt = new Date();
   entity.updatedAt = new Date();

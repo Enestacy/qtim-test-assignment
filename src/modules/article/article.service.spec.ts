@@ -20,7 +20,7 @@ describe('ArticleService', () => {
     authorId: 'user-1',
     title: 'Test Article',
     description: 'Test Description',
-    publishedAt: new Date('2024-01-01'),
+    publishedAt: '2024-01-01',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     deletedAt: null,
@@ -89,7 +89,7 @@ describe('ArticleService', () => {
     const createArticleDto: CreateArticleDto = {
       title: 'New Article',
       description: 'New Description',
-      publishedAt: new Date('2024-01-01'),
+      publishedAt: '2024-01-01',
     };
     const authorId = 'user-1';
 

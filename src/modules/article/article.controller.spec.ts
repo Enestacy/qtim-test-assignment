@@ -13,7 +13,7 @@ describe('ArticleController', () => {
     id: 'article-1',
     title: 'Test Article',
     description: 'Test Description',
-    publishedAt: new Date('2024-01-01'),
+    publishedAt: '2024-01-01',
     createdAt: new Date('2024-01-01'),
     author: {
       id: 'user-1',
@@ -112,7 +112,7 @@ describe('ArticleController', () => {
     const mockCreateArticleDto: CreateArticleDto = {
       title: 'New Article',
       description: 'New Description',
-      publishedAt: new Date('2024-01-01'),
+      publishedAt: '2024-01-01',
     };
 
     it('should successfully create article', async () => {

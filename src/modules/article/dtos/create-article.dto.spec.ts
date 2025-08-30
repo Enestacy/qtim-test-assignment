@@ -7,7 +7,7 @@ describe('CreateArticleDto', () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
       dto.description = 'Test Description';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -17,7 +17,7 @@ describe('CreateArticleDto', () => {
     it('should pass validation without optional description', async () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -38,7 +38,7 @@ describe('CreateArticleDto', () => {
   describe('title', () => {
     it('should return error if title is not defined', async () => {
       const dto = new CreateArticleDto();
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -50,7 +50,7 @@ describe('CreateArticleDto', () => {
     it('should return error if title is not a string', async () => {
       const dto = new CreateArticleDto();
       dto.title = 123 as any;
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -62,7 +62,7 @@ describe('CreateArticleDto', () => {
     it('should return error if title is empty', async () => {
       const dto = new CreateArticleDto();
       dto.title = '';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -74,7 +74,7 @@ describe('CreateArticleDto', () => {
     it('should pass validation with valid title', async () => {
       const dto = new CreateArticleDto();
       dto.title = 'Valid Article Title';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -86,7 +86,7 @@ describe('CreateArticleDto', () => {
     it('should pass validation when description is not provided', async () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -97,7 +97,7 @@ describe('CreateArticleDto', () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
       dto.description = 123 as any;
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -110,7 +110,7 @@ describe('CreateArticleDto', () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
       dto.description = '';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -123,7 +123,7 @@ describe('CreateArticleDto', () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
       dto.description = 'Valid description';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -170,7 +170,7 @@ describe('CreateArticleDto', () => {
     it('should pass validation with valid date', async () => {
       const dto = new CreateArticleDto();
       dto.title = 'Test Article';
-      dto.publishedAt = new Date('2024-01-01T10:00:00Z');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 

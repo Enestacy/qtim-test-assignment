@@ -230,7 +230,7 @@ describe('ListArticleDto', () => {
       const dto = plainToClass(ListArticleDto, {
         where: {
           publishedAt: {
-            gteDate: '2024-01-01T00:00:00Z',
+            gteDate: '2024-01-01',
           },
         },
       });
@@ -247,7 +247,7 @@ describe('ListArticleDto', () => {
             contains: 'test',
           },
           publishedAt: {
-            gteDate: '2024-01-01T00:00:00Z',
+            gteDate: '2024-01-01',
           },
         },
       });

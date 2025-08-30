@@ -1,4 +1,4 @@
-import { IsString, IsDate, ValidateNested, IsOptional } from 'class-validator';
+import { IsString, IsDate, ValidateNested, IsOptional, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CachedAuthorDto {
@@ -22,9 +22,8 @@ export class CachedArticleDto {
   @IsString()
   description: string;
 
-  @IsDate()
-  @Type(() => Date)
-  publishedAt: Date;
+  @IsDateString()
+  publishedAt: string;
 
   @IsDate()
   @Type(() => Date)

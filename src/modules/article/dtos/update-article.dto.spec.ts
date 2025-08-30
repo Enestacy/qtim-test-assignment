@@ -7,7 +7,7 @@ describe('UpdateArticleDto', () => {
       const dto = new UpdateArticleDto();
       dto.title = 'Updated Article';
       dto.description = 'Updated Description';
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -34,7 +34,7 @@ describe('UpdateArticleDto', () => {
 
     it('should pass validation with only publishedAt', async () => {
       const dto = new UpdateArticleDto();
-      dto.publishedAt = new Date('2024-01-01');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 
@@ -150,7 +150,7 @@ describe('UpdateArticleDto', () => {
 
     it('should pass validation with valid date', async () => {
       const dto = new UpdateArticleDto();
-      dto.publishedAt = new Date('2024-01-01T10:00:00Z');
+      dto.publishedAt = '2024-01-01';
 
       const errors = await validate(dto);
 

@@ -1,4 +1,12 @@
-import { IsDate, IsNotEmpty, IsOptional, IsString, ValidateBy, ValidateIf, ValidationArguments } from 'class-validator';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateBy,
+  ValidateIf,
+  ValidationArguments,
+} from 'class-validator';
 
 export class UpdateArticleDto {
   @IsOptional()
@@ -12,9 +20,9 @@ export class UpdateArticleDto {
   public description?: string | null;
 
   @IsOptional()
-  @IsDate()
+  @IsDateString()
   @IsNotEmpty()
-  public publishedAt?: Date;
+  public publishedAt?: string;
 
   @ValidateBy({
     name: 'hasAtLeastOneField',

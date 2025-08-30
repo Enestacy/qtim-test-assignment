@@ -24,8 +24,8 @@ export class ArticleEntity {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ nullable: false })
-  publishedAt: Date;
+  @Column({ nullable: false, type: 'date' })
+  publishedAt: string;
 
   @CreateDateColumn()
   createdAt: Date;
