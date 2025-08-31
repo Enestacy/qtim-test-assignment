@@ -9,8 +9,8 @@ import { UserModule } from './modules/user';
 import { AuthModule } from './modules/auth';
 import { HttpModule } from '@nestjs/axios';
 import { ArticleModule } from './modules/article';
-import { RedisModule } from '@liaoliaots/nestjs-redis';
 import redisConfig from './config/redis.config';
+import { RedisModule } from './infra/redis';
 
 @Module({
   imports: [

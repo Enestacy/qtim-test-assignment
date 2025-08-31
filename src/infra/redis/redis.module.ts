@@ -10,6 +10,7 @@ import { RedisService } from './redis.service';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService): Promise<RedisModuleOptions> => {
         return {
+          closeClient: true,
           config: {
             host: configService.getOrThrow('redis.host'),
             port: configService.getOrThrow('redis.port'),
