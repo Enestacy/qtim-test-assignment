@@ -14,6 +14,7 @@ import { ArticleEntity } from './article.entity';
 import { RedisService } from '../../infra/redis/redis.service';
 import { REDIS_TTL_DEFAULT_INTERVAL, RedisKeys } from 'src/infra/redis/constants';
 import { buildRedisKey } from 'src/common/helpers/build-redis-key.helper';
+import { DEFAULT_BATCH_SIZE } from 'src/common/constants';
 
 @Injectable()
 export class ArticleService {
@@ -133,7 +134,7 @@ export class ArticleService {
         return validatedData;
       }
 
-      const { limit = 20, offset = 0, where, orderBy } = query;
+      const { limit = DEFAULT_BATCH_SIZE, offset = 0, where, orderBy } = query;
 
       const whereCondition = buildWhereCondition<ArticleEntity>(where);
       const orderByCondition = buildOrderByCondition<ArticleEntity>(orderBy);
