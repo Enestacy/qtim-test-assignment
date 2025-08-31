@@ -1,0 +1,21 @@
+name: build-deps
+description: build dependencies
+runs:
+  using: composite
+  steps:
+    - name: Install deps and global packages
+      run: |
+        apk add --no-cache --virtual .gyp make g++ bash git tar
+      shell: sh
+
+    - name: Cache node deps
+      uses: actions/cache@v3
+      id: node-cache
+      with:
+        path: ./node_modules
+        key: ${{ runner.os }}-${{ github.ref_name }}-node-deps-${{ hashFiles('package-lock.json') }}
+
+    - name: Install node deps
+      if: steps.node-cache.outputs.cache-hit != 'true'
+      run: npm install
+      shell: sh 

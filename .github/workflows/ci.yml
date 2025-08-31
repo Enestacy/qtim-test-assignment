@@ -1,0 +1,90 @@
+name: CI
+
+on: push
+
+env:
+  NODE_ENV: test
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: node:23-alpine
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        uses: ./.github/actions/build-deps
+        
+      - name: Build app and deps
+        run: npm run build
+        shell: sh
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-artifacts
+          path: ./dist
+
+
+  unit-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: node:23-alpine
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        uses: ./.github/actions/build-deps
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: built-artifacts
+          path: dist
+      - run: npm run test
+
+  e2e-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: node:23-alpine
+      env:
+        DB_PORT: 5432
+        DB_HOST: db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_NAME: qtim_test
+        REDIS_HOST: redis
+        REDIS_PORT: 6379
+    services:
+      db:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: qtim_test
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432/tcp
+      redis:
+        image: redis:8.0
+        ports:
+          - 6379/tcp
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install deps
+        uses: ./.github/actions/build-deps
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: built-artifacts
+          path: dist
+      
+      - name: Database setup
+        run: npm run migration:up
+        shell: sh
+      
+      - run: npm run test:e2e
