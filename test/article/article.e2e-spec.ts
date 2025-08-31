@@ -429,7 +429,6 @@ describe('ArticleController (e2e)', () => {
         },
       });
 
-      // Verify article was deleted
       const deletedArticle = await articleRepository.findOne({ where: { id: articleEntity.id } });
       expect(deletedArticle).toBeNull();
     });
