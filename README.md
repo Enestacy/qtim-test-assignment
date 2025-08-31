@@ -4,6 +4,13 @@
 
 * [Docker & Docker Compose](https://docs.docker.com/compose/install/)
 
+## Документация API
+
+Полная документация API с примерами доступна по ссылке:
+
+**Postman Documentation:** [https://documenter.getpostman.com/view/32930910/2sB3Hhs2Z6](https://documenter.getpostman.com/view/32930910/2sB3Hhs2Z6)
+
+
 ## Быстрый старт
 
 ### Первый запуск
