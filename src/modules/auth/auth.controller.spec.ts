@@ -90,9 +90,10 @@ describe('AuthController', () => {
       const mockRequest = {
         user: {
           sub: 'user-1',
-          refreshToken: 'valid-refresh-token',
         },
+        get: jest.fn().mockReturnValue('valid-refresh-token'),
       } as unknown as Request;
+
       const authServiceRefreshTokensSpy = jest.spyOn(authService, 'refreshTokens').mockResolvedValue(mockTokens);
 
       const result = await controller.refreshTokens(mockRequest);
@@ -104,8 +105,8 @@ describe('AuthController', () => {
       const mockRequest = {
         user: {
           sub: 'user-1',
-          refreshToken: 'invalid-token',
         },
+        get: jest.fn().mockReturnValue('invalid-token'),
       } as unknown as Request;
       const error = new Error('Token refresh failed');
       const authServiceRefreshTokensSpy = jest.spyOn(authService, 'refreshTokens').mockRejectedValue(error);
