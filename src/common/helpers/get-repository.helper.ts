@@ -1,15 +1,14 @@
-import {
-  DataSource,
-  EntityTarget,
-  ObjectLiteral,
-  QueryRunner,
-  Repository,
-} from 'typeorm';
+import { DataSource, EntityTarget, ObjectLiteral, QueryRunner, Repository } from 'typeorm';
 
 type Source = QueryRunner | DataSource;
 
-const isQueryRunner = (source: Source): source is QueryRunner => true;
-const isDataSource = (source: Source): source is DataSource => true;
+const isQueryRunner = (source: Source): source is QueryRunner => {
+  return 'manager' in source && typeof source.manager === 'object';
+};
+
+const isDataSource = (source: Source): source is DataSource => {
+  return 'getRepository' in source && typeof source.getRepository === 'function';
+};
 
 export function getRepository<Entity extends ObjectLiteral>(
   source: Source,

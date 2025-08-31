@@ -96,8 +96,11 @@ export class ArticleService {
 
       const cachedData = await this.redisService.get(cacheKey);
       if (cachedData) {
-        const validatedData = parseCachedData<CachedArticleDto>(cachedData, CachedArticleDto);
         this.logger.debug(`Article cache hit for ID: ${id}`);
+        const validatedData = parseCachedData<CachedArticleDto>(cachedData, CachedArticleDto);
+        if (!validatedData) {
+          throw new InternalServerErrorException('Failed to parse cached data');
+        }
         return validatedData;
       }
 
@@ -129,8 +132,11 @@ export class ArticleService {
 
       const cachedData = await this.redisService.get(cacheKey);
       if (cachedData) {
-        const validatedData = parseCachedData<CachedArticleListDto>(cachedData, CachedArticleListDto);
         this.logger.debug(`Article list cache hit for query: ${JSON.stringify(query)}`);
+        const validatedData = parseCachedData<CachedArticleListDto>(cachedData, CachedArticleListDto);
+        if (!validatedData) {
+          throw new InternalServerErrorException('Failed to parse cached data');
+        }
         return validatedData;
       }
 
@@ -156,8 +162,8 @@ export class ArticleService {
       });
 
       const result = {
-        data: entities || [],
-        total: total || 0,
+        data: entities,
+        total,
       };
 
       try {

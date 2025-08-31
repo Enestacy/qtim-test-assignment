@@ -31,10 +31,10 @@ export class AuthService {
   async login({ login, password }: LoginDto) {
     try {
       const credentials = await this.authRepository.findOneBy({ login });
-      if (!credentials) throw new UnauthorizedException('Invalid credentials');
+      if (!credentials) throw new UnauthorizedException('Invalid credentials(login)');
 
       const isPasswordMatches = await bcrypt.compare(password, credentials.password);
-      if (!isPasswordMatches) throw new UnauthorizedException('Invalid credentials');
+      if (!isPasswordMatches) throw new UnauthorizedException('Invalid credentials(password)');
 
       const tokens = await this.generateTokens(credentials.userId);
 
@@ -96,8 +96,6 @@ export class AuthService {
   }
 
   async refreshTokens(userId: string, refreshToken: string) {
-    this.logger.log('userId', userId);
-    this.logger.log('refreshToken', refreshToken);
     const credentials = await this.authRepository.findOneBy({ userId });
     if (!credentials || !credentials.refreshToken) throw new UnauthorizedException();
 

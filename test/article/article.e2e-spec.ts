@@ -59,6 +59,59 @@ describe('ArticleController (e2e)', () => {
       });
     });
 
+    it('should handle pagination correctly', async () => {
+      const userEntity = UserFactory.build();
+      await createUser(userRepository, userEntity);
+
+      const articles = [];
+      for (let i = 1; i <= 10; i++) {
+        const articleEntity = ArticleFactory.build({
+          authorId: userEntity.id,
+          title: `Article ${i}`,
+          description: `Description ${i}`,
+        });
+        const savedArticle = await createArticle(articleRepository, articleEntity);
+        articles.push(savedArticle);
+      }
+
+      const firstPageResponse = await makeRequest({
+        app,
+        method: 'GET',
+        route: '/articles?limit=2&offset=0',
+        expectedStatus: 200,
+      });
+
+      expect(firstPageResponse.body.data).toHaveLength(2);
+      expect(firstPageResponse.body.total).toBe(10);
+      expect(firstPageResponse.body.data[0].title).toBe('Article 10');
+      expect(firstPageResponse.body.data[1].title).toBe('Article 9');
+
+      const secondPageResponse = await makeRequest({
+        app,
+        method: 'GET',
+        route: '/articles?limit=2&offset=2',
+        expectedStatus: 200,
+      });
+
+      expect(secondPageResponse.body.data).toHaveLength(2);
+      expect(secondPageResponse.body.total).toBe(10);
+      expect(secondPageResponse.body.data[0].title).toBe('Article 8');
+      expect(secondPageResponse.body.data[1].title).toBe('Article 7');
+
+      const lastPageResponse = await makeRequest({
+        app,
+        method: 'GET',
+        route: '/articles?limit=10&offset=7',
+        expectedStatus: 200,
+      });
+
+      expect(lastPageResponse.body.data).toHaveLength(3);
+      expect(lastPageResponse.body.total).toBe(10);
+      expect(lastPageResponse.body.data[0].title).toBe('Article 3');
+      expect(lastPageResponse.body.data[1].title).toBe('Article 2');
+      expect(lastPageResponse.body.data[2].title).toBe('Article 1');
+    });
+
     it('should successfully list articles', async () => {
       const userEntity = UserFactory.build();
       await createUser(userRepository, userEntity);
@@ -376,7 +429,6 @@ describe('ArticleController (e2e)', () => {
         },
       });
 
-      // Verify article was deleted
       const deletedArticle = await articleRepository.findOne({ where: { id: articleEntity.id } });
       expect(deletedArticle).toBeNull();
     });

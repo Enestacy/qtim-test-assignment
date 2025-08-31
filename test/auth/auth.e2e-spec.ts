@@ -153,7 +153,7 @@ describe('AuthController (e2e)', () => {
       const expectedResponse = {
         statusCode: 401,
         error: 'Unauthorized',
-        message: 'Invalid credentials',
+        message: 'Invalid credentials(login)',
       };
 
       await makeRequest({
@@ -187,7 +187,7 @@ describe('AuthController (e2e)', () => {
       const expectedResponse = {
         statusCode: 401,
         error: 'Unauthorized',
-        message: 'Invalid credentials',
+        message: 'Invalid credentials(password)',
       };
 
       await makeRequest({
