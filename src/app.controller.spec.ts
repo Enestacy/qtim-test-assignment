@@ -16,7 +16,7 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "OK"', () => {
-      expect(appController.healthCheck()).toBe('RUIN UNIT TESTS ARE OK');
+      expect(appController.healthCheck()).toBe('OK');
     });
   });
 });
