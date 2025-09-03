@@ -1,4 +1,4 @@
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ArticleEntity } from './article.entity';
 import { ArticleRepository } from './article.repository';
@@ -9,7 +9,7 @@ import { RedisModule } from 'src/infra/redis';
 @Module({
   imports: [TypeOrmModule.forFeature([ArticleEntity]), RedisModule],
   controllers: [ArticleController],
-  providers: [ArticleRepository, ArticleService, Logger],
+  providers: [ArticleRepository, ArticleService],
   exports: [ArticleService],
 })
 export class ArticleModule {}

@@ -18,10 +18,10 @@ import { DEFAULT_BATCH_SIZE } from 'src/common/constants';
 
 @Injectable()
 export class ArticleService {
+  private readonly logger: Logger;
   constructor(
     private readonly articleRepository: ArticleRepository,
     private readonly redisService: RedisService,
-    private readonly logger: Logger,
   ) {
     this.logger = new Logger(ArticleService.name);
   }

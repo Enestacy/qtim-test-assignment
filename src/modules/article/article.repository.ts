@@ -10,10 +10,11 @@ import { ArticleWithAuthor } from './types/article.types';
 
 @Injectable()
 export class ArticleRepository {
+  private readonly logger: Logger;
+
   constructor(
     @InjectRepository(ArticleEntity)
     private readonly datasource: DataSource,
-    private readonly logger: Logger,
   ) {
     this.logger = new Logger(ArticleRepository.name);
   }

@@ -17,13 +17,14 @@ import { TokensData } from './types';
 
 @Injectable()
 export class AuthService {
+  private readonly logger: Logger;
+
   constructor(
     private authRepository: AuthRepository,
     private jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
     private readonly datasource: DataSource,
-    private readonly logger: Logger,
   ) {
     this.logger = new Logger(AuthService.name);
   }

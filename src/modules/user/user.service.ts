@@ -7,10 +7,9 @@ import { CreateUserDto } from './dtos';
 
 @Injectable()
 export class UserService {
-  constructor(
-    private readonly userRepository: UserRepository,
-    private readonly logger: Logger,
-  ) {
+  private readonly logger: Logger;
+
+  constructor(private readonly userRepository: UserRepository) {
     this.logger = new Logger(UserService.name);
   }
 

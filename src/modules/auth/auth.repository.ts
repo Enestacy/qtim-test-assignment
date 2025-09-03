@@ -9,10 +9,11 @@ import { getRepository } from 'src/common/helpers';
 
 @Injectable()
 export class AuthRepository {
+  private readonly logger: Logger;
+
   constructor(
     @InjectRepository(AuthEntity)
     private readonly datasource: DataSource,
-    private readonly logger: Logger,
   ) {
     this.logger = new Logger(AuthRepository.name);
   }
