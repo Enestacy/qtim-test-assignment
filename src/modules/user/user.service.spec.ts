@@ -9,7 +9,6 @@ import { randomUUID } from 'crypto';
 describe('UserService', () => {
   let service: UserService;
   let userRepository: jest.Mocked<UserRepository>;
-  let logger: Logger;
 
   const mockUser: UserEntity = {
     id: randomUUID(),
@@ -47,9 +46,6 @@ describe('UserService', () => {
 
     service = module.get<UserService>(UserService);
     userRepository = module.get(UserRepository);
-    logger = module.get<Logger>(Logger);
-
-    module.useLogger(logger);
   });
 
   afterEach(() => {
@@ -99,7 +95,6 @@ describe('UserService', () => {
       const userRepositoryCreateSpy = jest.spyOn(userRepository, 'create').mockRejectedValue(error);
 
       await expect(service.create(mockCreateUserDto)).rejects.toThrow(error);
-      expect(logger.error).toHaveBeenCalledWith('Database error', undefined, 'UserService');
       expect(userRepositoryCreateSpy).toHaveBeenCalledWith(mockCreateUserDto, { queryRunner: undefined });
     });
   });

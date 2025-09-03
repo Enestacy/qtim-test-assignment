@@ -1,4 +1,4 @@
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -25,7 +25,7 @@ import { AuthRepository } from './auth.repository';
     ConfigModule,
     UserModule,
   ],
-  providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy, Logger, AuthRepository],
+  providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy, AuthRepository],
   controllers: [AuthController],
   exports: [AuthService],
 })
